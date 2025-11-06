@@ -19,4 +19,4 @@ export const techniqueConfig = {
     components: ["Time Block Planner", "Notes Pad"],
     layout: "stacked",
   },
-};
+} as any;
