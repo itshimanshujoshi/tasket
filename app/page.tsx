@@ -1,25 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
 
 interface Todo {
   _id: string;
   title: string;
   description: string;
   completed?: boolean;
+  technique?: string;
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState({ title: "", description: "" });
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [loading, setLoading] = useState(false);
-  const [userName, setUserName] = useState("user");
 
   const fetchTodos = async () => {
     try {
       const response = await fetch(`/api/todos`);
       const data = await response.json();
+      console.log(data);
       setTodos(data.todos);
     } catch (error) {
       console.error("Failed to fetch todos:", error);
@@ -38,7 +42,7 @@ export default function HomePage() {
       await fetch("/api/todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newTodo, name: userName, completed: false }),
+        body: JSON.stringify({ ...newTodo, completed: false }),
       });
 
       setNewTodo({ title: "", description: "" });
@@ -71,17 +75,25 @@ export default function HomePage() {
   };
 
   const deleteTodo = async (todoId: string) => {
-    try {
-      await fetch("/api/todos", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: todoId }),
-      });
+    const result = await Swal.fire({
+      title: "Delete Task?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#4f46e5",
+      cancelButtonColor: "#6366f1",
+      confirmButtonText: "Yes, delete it!",
+    });
 
-      await fetchTodos();
-    } catch (error) {
-      console.error("Failed to delete todo:", error);
-    }
+    if (!result.isConfirmed) return;
+
+    await fetch("/api/todos", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: todoId }),
+    });
+
+    await fetchTodos();
   };
 
   const toggleComplete = async (todo: Todo) => {
@@ -98,6 +110,18 @@ export default function HomePage() {
     }
   };
 
+  const applyTechnique = async (todoId: string, technique: string) => {
+    if (!technique) return;
+
+    await fetch("/api/todos", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _id: todoId, technique }),
+    });
+
+    router.push(`/technique/${technique.toLowerCase()}?id=${todoId}`);
+  };
+
   const startEdit = (todo: Todo) => {
     setEditingTodo({ ...todo });
   };
@@ -109,13 +133,6 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-800 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Task Manager
-          </h1>
-          <p className="text-slate-600 mt-2">Organize your day, one task at a time</p>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Left Side - Add/Edit Todo */}
           <div className="lg:col-span-2">
@@ -133,7 +150,7 @@ export default function HomePage() {
                   </>
                 )}
               </h2>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -145,7 +162,10 @@ export default function HomePage() {
                     value={editingTodo ? editingTodo.title : newTodo.title}
                     onChange={(e) =>
                       editingTodo
-                        ? setEditingTodo({ ...editingTodo, title: e.target.value })
+                        ? setEditingTodo({
+                            ...editingTodo,
+                            title: e.target.value,
+                          })
                         : setNewTodo({ ...newTodo, title: e.target.value })
                     }
                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
@@ -158,11 +178,21 @@ export default function HomePage() {
                   </label>
                   <textarea
                     placeholder="Add more details..."
-                    value={editingTodo ? editingTodo.description : newTodo.description}
+                    value={
+                      editingTodo
+                        ? editingTodo.description
+                        : newTodo.description
+                    }
                     onChange={(e) =>
                       editingTodo
-                        ? setEditingTodo({ ...editingTodo, description: e.target.value })
-                        : setNewTodo({ ...newTodo, description: e.target.value })
+                        ? setEditingTodo({
+                            ...editingTodo,
+                            description: e.target.value,
+                          })
+                        : setNewTodo({
+                            ...newTodo,
+                            description: e.target.value,
+                          })
                     }
                     rows={4}
                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors resize-none"
@@ -213,7 +243,9 @@ export default function HomePage() {
                   <div className="text-center py-16">
                     <div className="text-6xl mb-4">📝</div>
                     <p className="text-slate-400 text-lg">No tasks yet</p>
-                    <p className="text-slate-300 text-sm mt-2">Add your first task to get started!</p>
+                    <p className="text-slate-300 text-sm mt-2">
+                      Add your first task to get started!
+                    </p>
                   </div>
                 ) : (
                   todos.map((todo) => (
@@ -264,7 +296,9 @@ export default function HomePage() {
                           {todo.description && (
                             <p
                               className={`text-sm mt-1 ${
-                                todo.completed ? "text-slate-400" : "text-slate-600"
+                                todo.completed
+                                  ? "text-slate-400"
+                                  : "text-slate-600"
                               }`}
                             >
                               {todo.description}
@@ -272,24 +306,29 @@ export default function HomePage() {
                           )}
                         </div>
 
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => startEdit(todo)}
-                            className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
-                            title="Edit task"
-                          >
-                            <svg
-                              className="w-5 h-5 text-blue-600"
-                              fill="none"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
+                        <div className="flex gap-2">
+                          {!todo.completed ? (
+                            <button
+                              onClick={() => startEdit(todo)}
+                              className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                              title="Edit task"
                             >
-                              <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                            </svg>
-                          </button>
+                              <svg
+                                className="w-5 h-5 text-blue-600"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                              </svg>
+                            </button>
+                          ) : (
+                            ""
+                          )}
+
                           <button
                             onClick={() => deleteTodo(todo._id)}
                             className="p-2 hover:bg-red-100 rounded-lg transition-colors"
@@ -307,6 +346,25 @@ export default function HomePage() {
                               <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                           </button>
+
+                          {!todo.completed ? (
+                            <select
+                              onChange={(e) =>
+                                applyTechnique(todo._id, e.target.value)
+                              }
+                              defaultValue={todo.technique || ""}
+                              className="text-sm border border-slate-300 rounded-lg px-2 py-1"
+                            >
+                              <option value="">Select Technique</option>
+                              <option value="Pomodoro">Pomodoro</option>
+                              <option value="Eisenhower">
+                                Eisenhower Matrix
+                              </option>
+                              <option value="DeepWork">Deep Work</option>
+                            </select>
+                          ) : (
+                            ""
+                          )}
                         </div>
                       </div>
                     </div>

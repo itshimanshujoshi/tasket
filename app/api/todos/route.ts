@@ -33,9 +33,29 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const data = await req.json();
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
-  await db.collection("todos").deleteOne({ id: data.id });
-  return NextResponse.json({ success: true });
+  try {
+    const { id } = await req.json();
+
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB);
+
+    const result = await db.collection("todos").deleteOne({
+      _id: new ObjectId(id),
+    });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({
+        success: false,
+        message: "No todo found with that ID",
+      });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE error:", error);
+    return NextResponse.json(
+      { success: false },
+      { status: 500 }
+    );
+  }
 }
