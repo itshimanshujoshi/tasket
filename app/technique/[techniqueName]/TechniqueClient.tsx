@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { techniqueConfig } from "@/lib/technique-config";
 
-// ✅ Dynamic imports for all technique widgets
 const PomodoroTimer = dynamic(() => import("@/components/techniques/PomodoroTimer"));
 const FocusTracker = dynamic(() => import("@/components/techniques/FocusTracker"));
 const NotesPad = dynamic(() => import("@/components/techniques/NotesPad"));
