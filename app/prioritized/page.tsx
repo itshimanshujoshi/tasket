@@ -6,6 +6,9 @@ export default function PrioritizedPage() {
   const [groups, setGroups] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [taskInsights, setTaskInsights] = useState<any>({});
+  const [loadingInsights, setLoadingInsights] = useState<any>({});
 
   const fetchAIPlan = async () => {
     setLoading(true);
@@ -36,6 +39,36 @@ export default function PrioritizedPage() {
     });
   };
 
+  const toggleExpand = (taskId: string) => {
+    setExpandedTask(expandedTask === taskId ? null : taskId);
+  };
+
+  const fetchTaskInsight = async (task: any, action: string) => {
+    const key = `${task._id}-${action}`;
+    setLoadingInsights((prev: any) => ({ ...prev, [key]: true }));
+    
+    try {
+      const params = new URLSearchParams({
+        taskId: task._id,
+        title: task.title,
+        description: task.description || '',
+        action: action
+      });
+      
+      const res = await fetch(`/api/prioritize?${params}`);
+      const data = await res.json();
+      
+      setTaskInsights((prev: any) => ({
+        ...prev,
+        [task._id]: { ...prev[task._id], [action]: data }
+      }));
+    } catch (err) {
+      console.error('Failed to fetch insight', err);
+    } finally {
+      setLoadingInsights((prev: any) => ({ ...prev, [key]: false }));
+    }
+  };
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
@@ -51,6 +84,7 @@ export default function PrioritizedPage() {
             <p className="text-sm">⚡ Analyzing task complexity</p>
             <p className="text-sm">🎯 Calculating impact scores</p>
             <p className="text-sm">🔥 Optimizing your workflow</p>
+            <p className="text-sm">💡 Generating pro tips</p>
           </div>
         </div>
       </main>
@@ -203,6 +237,7 @@ export default function PrioritizedPage() {
             </span>
           </a>
         </div>
+
         {/* Epic Status Banner */}
         <div className="mb-8 bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-purple-600/20 backdrop-blur-sm rounded-3xl p-8 border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -211,9 +246,8 @@ export default function PrioritizedPage() {
                 {message.text}
               </h2>
               <p className="text-purple-200 text-sm leading-relaxed max-w-2xl">
-                Our AI analyzed every task for maximum impact. Hit focus tasks
-                first, ride the momentum with quick wins, then dominate deep
-                work.
+                Our AI analyzed every task for maximum impact with personalized tips. 
+                Click any task for AI-powered strategies to dominate it! 💡
               </p>
             </div>
             <div className="flex gap-6">
@@ -326,57 +360,204 @@ export default function PrioritizedPage() {
                   section.items.map((item: any, i: number) => {
                     const taskId = `${idx}-${i}`;
                     const isCompleted = completedTasks.has(taskId);
+                    const isExpanded = expandedTask === taskId;
 
                     return (
                       <div
                         key={i}
-                        onClick={() => toggleComplete(taskId)}
-                        className={`bg-slate-800/50 backdrop-blur-sm rounded-2xl p-5 border-2 ${
+                        className={`bg-slate-800/50 backdrop-blur-sm rounded-2xl border-2 ${
                           isCompleted
                             ? "border-green-500/50 bg-green-900/20"
                             : "border-slate-700/50"
-                        } hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-200 cursor-pointer group`}
+                        } hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-200`}
                       >
-                        <div className="flex items-start gap-4">
-                          <div className="mt-1">
-                            <div
-                              className={`w-7 h-7 rounded-xl border-3 ${
-                                isCompleted
-                                  ? "border-green-500 bg-green-500"
-                                  : "border-purple-400 group-hover:border-purple-300"
-                              } transition-all flex items-center justify-center shadow-lg`}
-                            >
-                              {isCompleted && (
-                                <span className="text-white text-sm font-bold">
-                                  ✓
-                                </span>
+                        <div className="p-5">
+                          <div className="flex items-start gap-4">
+                            <div className="mt-1">
+                              <div
+                                onClick={() => toggleComplete(taskId)}
+                                className={`w-7 h-7 rounded-xl border-3 ${
+                                  isCompleted
+                                    ? "border-green-500 bg-green-500"
+                                    : "border-purple-400 hover:border-purple-300"
+                                } transition-all flex items-center justify-center shadow-lg cursor-pointer`}
+                              >
+                                {isCompleted && (
+                                  <span className="text-white text-sm font-bold">
+                                    ✓
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between">
+                                <h3
+                                  className={`font-bold text-white hover:text-purple-300 transition-colors text-lg ${
+                                    isCompleted ? "line-through opacity-50" : ""
+                                  }`}
+                                >
+                                  {item.title}
+                                </h3>
+                                <button
+                                  onClick={() => toggleExpand(taskId)}
+                                  className="ml-2 text-purple-400 hover:text-purple-300 transition-colors"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isExpanded ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                                  </svg>
+                                </button>
+                              </div>
+                              {item.description && (
+                                <p
+                                  className={`text-sm text-purple-200 mt-2 leading-relaxed ${
+                                    isCompleted ? "line-through opacity-50" : ""
+                                  }`}
+                                >
+                                  {item.description}
+                                </p>
+                              )}
+                              
+                              {/* AI Tip Badge */}
+                              {item.tip && (
+                                <div className="mt-3 p-3 bg-gradient-to-r from-blue-900/40 to-cyan-900/40 rounded-xl border border-cyan-500/30">
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-lg">💡</span>
+                                    <div className="flex-1">
+                                      <p className="text-sm text-cyan-100 font-semibold">{item.tip}</p>
+                                      <div className="flex gap-3 mt-2 text-xs font-bold">
+                                        {item.estimatedTime && (
+                                          <span className="text-cyan-300">⏱️ {item.estimatedTime}</span>
+                                        )}
+                                        {item.difficulty && (
+                                          <span className="text-cyan-300">📊 {item.difficulty}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* AI Insight */}
+                              {item.aiInsight && !isExpanded && (
+                                <div className="mt-2 text-xs text-purple-300 italic">
+                                  🎯 {item.aiInsight}
+                                </div>
                               )}
                             </div>
                           </div>
-                          <div className="flex-1">
-                            <h3
-                              className={`font-bold text-white group-hover:text-purple-300 transition-colors text-lg ${
-                                isCompleted ? "line-through opacity-50" : ""
-                              }`}
-                            >
-                              {item.title}
-                            </h3>
-                            {item.description && (
-                              <p
-                                className={`text-sm text-purple-200 mt-2 leading-relaxed ${
-                                  isCompleted ? "line-through opacity-50" : ""
-                                }`}
-                              >
-                                {item.description}
-                              </p>
-                            )}
-                            {item.estimatedTime && (
-                              <div className="flex items-center gap-2 mt-3 text-xs text-purple-300 font-bold">
-                                <span>⏱️</span>
-                                <span>{item.estimatedTime}</span>
+
+                          {/* Expanded AI Actions */}
+                          {isExpanded && (
+                            <div className="mt-4 pt-4 border-t border-purple-500/30 space-y-3">
+                              {/* Action Buttons */}
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => fetchTaskInsight(item, 'breakdown')}
+                                  disabled={loadingInsights[`${item._id}-breakdown`]}
+                                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/50 text-purple-200 rounded-xl hover:from-purple-600/30 hover:to-pink-600/30 transition-all text-xs font-bold disabled:opacity-50 shadow-lg"
+                                >
+                                  <span>📋</span>
+                                  {loadingInsights[`${item._id}-breakdown`] ? 'Loading...' : 'Break it Down'}
+                                </button>
+                                
+                                <button
+                                  onClick={() => fetchTaskInsight(item, 'strategy')}
+                                  disabled={loadingInsights[`${item._id}-strategy`]}
+                                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/50 text-blue-200 rounded-xl hover:from-blue-600/30 hover:to-cyan-600/30 transition-all text-xs font-bold disabled:opacity-50 shadow-lg"
+                                >
+                                  <span>🎯</span>
+                                  {loadingInsights[`${item._id}-strategy`] ? 'Loading...' : 'Winning Strategy'}
+                                </button>
+                                
+                                <button
+                                  onClick={() => fetchTaskInsight(item, 'motivate')}
+                                  disabled={loadingInsights[`${item._id}-motivate`]}
+                                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/50 text-green-200 rounded-xl hover:from-green-600/30 hover:to-emerald-600/30 transition-all text-xs font-bold disabled:opacity-50 shadow-lg"
+                                >
+                                  <span>⚡</span>
+                                  {loadingInsights[`${item._id}-motivate`] ? 'Loading...' : 'Motivate Me'}
+                                </button>
+
+                                <button
+                                  onClick={() => fetchTaskInsight(item, 'obstacles')}
+                                  disabled={loadingInsights[`${item._id}-obstacles`]}
+                                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-600/20 to-red-600/20 border border-orange-500/50 text-orange-200 rounded-xl hover:from-orange-600/30 hover:to-red-600/30 transition-all text-xs font-bold disabled:opacity-50 shadow-lg"
+                                >
+                                  <span>🚧</span>
+                                  {loadingInsights[`${item._id}-obstacles`] ? 'Loading...' : 'Spot Blockers'}
+                                </button>
                               </div>
-                            )}
-                          </div>
+
+                              {/* Breakdown Results */}
+                              {taskInsights[item._id]?.breakdown && (
+                                <div className="p-4 bg-gradient-to-r from-purple-900/40 to-pink-900/40 rounded-xl border border-purple-500/30">
+                                  <h4 className="font-black text-purple-200 text-sm mb-3 flex items-center gap-2">
+                                    <span>📋</span> STEP-BY-STEP BREAKDOWN
+                                  </h4>
+                                  <ol className="space-y-2">
+                                    {taskInsights[item._id].breakdown.steps.map((step: string, i: number) => (
+                                      <li key={i} className="flex gap-3 text-sm text-purple-100">
+                                        <span className="font-black text-purple-400">{i + 1}.</span>
+                                        <span className="font-semibold">{step}</span>
+                                      </li>
+                                    ))}
+                                  </ol>
+                                </div>
+                              )}
+
+                              {/* Strategy Results */}
+                              {taskInsights[item._id]?.strategy && (
+                                <div className="p-4 bg-gradient-to-r from-blue-900/40 to-cyan-900/40 rounded-xl border border-blue-500/30">
+                                  <h4 className="font-black text-blue-200 text-sm mb-3 flex items-center gap-2">
+                                    <span>🎯</span> WINNING STRATEGIES
+                                  </h4>
+                                  <ul className="space-y-2">
+                                    {taskInsights[item._id].strategy.strategies.map((strat: string, i: number) => (
+                                      <li key={i} className="flex gap-3 text-sm text-blue-100">
+                                        <span className="text-blue-400">▶</span>
+                                        <span className="font-semibold">{strat}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Motivation Results */}
+                              {taskInsights[item._id]?.motivate && (
+                                <div className="p-4 bg-gradient-to-r from-green-900/40 to-emerald-900/40 rounded-xl border border-green-500/30">
+                                  <div className="flex items-start gap-3">
+                                    <span className="text-2xl">⚡</span>
+                                    <p className="text-sm text-green-100 font-bold italic leading-relaxed">
+                                      {taskInsights[item._id].motivate.message}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Obstacles Results */}
+                              {taskInsights[item._id]?.obstacles && (
+                                <div className="p-4 bg-gradient-to-r from-orange-900/40 to-red-900/40 rounded-xl border border-orange-500/30">
+                                  <h4 className="font-black text-orange-200 text-sm mb-3 flex items-center gap-2">
+                                    <span>🚧</span> BLOCKERS & SOLUTIONS
+                                  </h4>
+                                  <div className="space-y-3">
+                                    {taskInsights[item._id].obstacles.obstacles.map((obs: any, i: number) => (
+                                      <div key={i} className="space-y-1">
+                                        <div className="flex gap-2 text-sm">
+                                          <span className="text-red-400 font-bold">🚨</span>
+                                          <span className="text-red-200 font-semibold">{obs.blocker}</span>
+                                        </div>
+                                        <div className="flex gap-2 text-sm ml-5">
+                                          <span className="text-green-400 font-bold">✅</span>
+                                          <span className="text-green-200 font-semibold">{obs.solution}</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -394,8 +575,7 @@ export default function PrioritizedPage() {
               FEELING THE PRESSURE? 💪
             </p>
             <p className="text-sm text-purple-200">
-              One focus task = one win. Stack wins, dominate the day. That's the
-              formula.
+              One focus task = one win. Stack wins, dominate the day. Click any task for AI-powered strategies! 🎯
             </p>
           </div>
           <button
@@ -410,7 +590,7 @@ export default function PrioritizedPage() {
         {/* Footer Intensity Note */}
         <div className="mt-6 text-center">
           <p className="text-xs text-purple-400 font-bold uppercase tracking-wider">
-            AI-POWERED • IMPACT-OPTIMIZED • MOMENTUM-DRIVEN
+            AI-POWERED • IMPACT-OPTIMIZED • MOMENTUM-DRIVEN • PRO TIPS INCLUDED
           </p>
         </div>
       </div>
