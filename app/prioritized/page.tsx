@@ -1,19 +1,45 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function PrioritizedPage() {
+  const router = useRouter();
   const [groups, setGroups] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [taskInsights, setTaskInsights] = useState<any>({});
   const [loadingInsights, setLoadingInsights] = useState<any>({});
 
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        const data = await response.json();
+        if (!data.user) {
+          router.push("/login");
+          return;
+        }
+        setCheckingAuth(false);
+      } catch (error) {
+        console.error("Auth check error:", error);
+        router.push("/login");
+      }
+    };
+    checkAuth();
+  }, [router]);
+
   const fetchAIPlan = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/prioritize", { method: "POST" });
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
       const data = await res.json();
       setGroups(data.groups);
     } catch (err) {
@@ -24,8 +50,10 @@ export default function PrioritizedPage() {
   };
 
   useEffect(() => {
-    fetchAIPlan();
-  }, []);
+    if (!checkingAuth) {
+      fetchAIPlan();
+    }
+  }, [checkingAuth]);
 
   const toggleComplete = (taskId: string) => {
     setCompletedTasks((prev) => {
@@ -68,6 +96,17 @@ export default function PrioritizedPage() {
       setLoadingInsights((prev: any) => ({ ...prev, [key]: false }));
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-spin">⚡</div>
+          <p className="text-purple-300 font-bold">Checking authentication...</p>
+        </div>
+      </main>
+    );
+  }
 
   if (loading) {
     return (

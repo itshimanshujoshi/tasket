@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 
 interface Todo {
@@ -12,15 +13,40 @@ interface Todo {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState({ title: "", description: "" });
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        const data = await response.json();
+        if (!data.user) {
+          router.push("/login");
+          return;
+        }
+        setCheckingAuth(false);
+      } catch (error) {
+        console.error("Auth check error:", error);
+        router.push("/login");
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   const fetchTodos = async () => {
     try {
       const response = await fetch(`/api/todos`);
+      if (response.status === 401) {
+        router.push("/login");
+        return;
+      }
       const data = await response.json();
       setTodos(data.todos);
     } catch (error) {
@@ -34,8 +60,10 @@ export default function HomePage() {
     todos.length > 0 ? Math.round((completedCount / todos.length) * 100) : 0;
 
   useEffect(() => {
-    fetchTodos();
-  }, []);
+    if (!checkingAuth) {
+      fetchTodos();
+    }
+  }, [checkingAuth]);
 
   const addTodo = async () => {
     if (!newTodo.title.trim()) {
@@ -171,6 +199,17 @@ export default function HomePage() {
   };
 
   const motivation = getMotivation();
+
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-spin">⚡</div>
+          <p className="text-purple-300 font-bold">Checking authentication...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-8">

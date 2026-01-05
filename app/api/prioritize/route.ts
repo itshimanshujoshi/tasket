@@ -1,14 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { model } from "@/lib/gemini";
+import { getCurrentUser } from "@/lib/auth";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB);
 
     const tasks = await db.collection("todos")
-      .find({})
+      .find({ userId: user._id })
       .sort({ created_at: -1 })
       .toArray();
 

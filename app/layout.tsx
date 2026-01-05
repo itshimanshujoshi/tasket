@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
-import logo from "../public/images/logo.png";
+import Header from "@/components/Header";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,51 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white antialiased">
         {/* Epic Navbar */}
-        <header className="bg-slate-900/50 backdrop-blur-md border-b-2 border-purple-500/30 sticky top-0 z-50 shadow-xl shadow-purple-500/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            {/* Logo Section */}
-            <Link href="/" className="flex items-center space-x-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-purple-600 rounded-xl blur-md opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                <Image
-                  src={logo}
-                  alt="Tasket logo"
-                  width={48}
-                  height={48}
-                  priority
-                  className="rounded-xl relative z-10 border-2 border-purple-500/50 group-hover:border-purple-400 transition-all"
-                />
-              </div>
-            </Link>
-
-            {/* Quick Stats / User Info */}
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-3 bg-purple-900/30 backdrop-blur-sm px-4 py-2 rounded-xl border border-purple-500/30">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-sm font-bold text-purple-200">
-                  SYSTEM ACTIVE
-                </span>
-              </div>
-
-              {/* Mobile Menu Button */}
-              <button className="md:hidden p-2 hover:bg-purple-500/20 rounded-lg transition-colors">
-                <svg
-                  className="w-6 h-6 text-purple-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </header>
+        <Header />
 
         {/* Page Content - Full Width */}
         <main className="min-h-[calc(100vh-140px)]">{children}</main>

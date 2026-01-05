@@ -1,11 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { model } from "@/lib/gemini";
 import { techniqueConfig } from "@/lib/technique-config";
+import { getCurrentUser } from "@/lib/auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { todoId, technique } = await req.json();
 
     // ✅ 1. Connect to DB
@@ -13,10 +19,13 @@ export async function POST(req: Request) {
     const db = client.db(process.env.MONGODB_DB);
     const todo = await db
       .collection("todos")
-      .findOne({ _id: new ObjectId(todoId) });
+      .findOne({ _id: new ObjectId(todoId), userId: user._id });
 
     if (!todo) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Task not found or unauthorized" },
+        { status: 404 }
+      );
     }
 
     // ✅ 2. Get technique details from config
