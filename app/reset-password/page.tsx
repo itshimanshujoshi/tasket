@@ -1,46 +1,54 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import Link from "next/link";
 
-export default function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true);
+export default function ResetPasswordPage() {
   const [formData, setFormData] = useState({
     email: "",
-    password: "",
-    name: "",
+    otp: "",
+    newPassword: "",
+    confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const checkSession = async () => {
-      try {
-        const response = await fetch("/api/auth/session");
-        const data = await response.json();
-        if (data.user) {
-          router.push("/");
-        }
-      } catch (error) {
-        console.error("Session check error:", error);
-      }
-    };
-    checkSession();
-  }, [router]);
+    const emailParam = searchParams.get("email");
+    if (emailParam) {
+      setFormData((prev) => ({ ...prev, email: emailParam }));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      await Swal.fire({
+        title: "❌ Error",
+        text: "Passwords do not match",
+        icon: "error",
+        background: "#1e293b",
+        color: "#ffffff",
+        confirmButtonColor: "#9333ea",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          email: formData.email,
+          otp: formData.otp,
+          newPassword: formData.newPassword,
+        }),
       });
 
       const data = await response.json();
@@ -59,21 +67,18 @@ export default function LoginPage() {
 
       await Swal.fire({
         title: "✅ Success!",
-        text: isLogin
-          ? "Welcome back! Redirecting..."
-          : "Account created! Redirecting...",
+        text: "Password reset successfully. Redirecting to login...",
         icon: "success",
         background: "#1e293b",
         color: "#ffffff",
         confirmButtonColor: "#9333ea",
-        timer: 1500,
+        timer: 2000,
         showConfirmButton: false,
       });
 
-      router.push("/");
-      router.refresh();
+      router.push("/login");
     } catch (error) {
-      console.error("Auth error:", error);
+      console.error("Reset password error:", error);
       await Swal.fire({
         title: "❌ Error",
         text: "Something went wrong. Please try again.",
@@ -94,35 +99,15 @@ export default function LoginPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-black mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              {isLogin ? "WELCOME BACK" : "JOIN THE MISSION"}
+              RESET PASSWORD
             </h1>
             <p className="text-purple-300 text-sm font-bold uppercase tracking-wider">
-              {isLogin
-                ? "Ready to dominate your tasks?"
-                : "Start your productivity journey"}
+              Enter the OTP and your new password
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-bold text-purple-200 mb-2 uppercase tracking-wider">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required={!isLogin}
-                  placeholder="Your name"
-                  className="w-full bg-slate-900/50 border-2 border-purple-500/30 rounded-xl px-4 py-3 transition-all text-white placeholder-slate-500 focus:outline-none focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20"
-                />
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-bold text-purple-200 mb-2 uppercase tracking-wider">
                 Email
@@ -141,34 +126,57 @@ export default function LoginPage() {
 
             <div>
               <label className="block text-sm font-bold text-purple-200 mb-2 uppercase tracking-wider">
-                Password
+                OTP Code
+              </label>
+              <input
+                type="text"
+                value={formData.otp}
+                onChange={(e) =>
+                  setFormData({ ...formData, otp: e.target.value })
+                }
+                required
+                placeholder="Enter 6-digit OTP"
+                maxLength={6}
+                pattern="[0-9]{6}"
+                className="w-full bg-slate-900/50 border-2 border-purple-500/30 rounded-xl px-4 py-3 transition-all text-white placeholder-slate-500 focus:outline-none focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20 text-center text-2xl tracking-widest"
+              />
+              <p className="text-xs text-purple-400 mt-1">
+                Check your email for the 6-digit code
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-purple-200 mb-2 uppercase tracking-wider">
+                New Password
               </label>
               <input
                 type="password"
-                value={formData.password}
+                value={formData.newPassword}
                 onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
+                  setFormData({ ...formData, newPassword: e.target.value })
                 }
                 required
                 placeholder="••••••••"
                 minLength={6}
                 className="w-full bg-slate-900/50 border-2 border-purple-500/30 rounded-xl px-4 py-3 transition-all text-white placeholder-slate-500 focus:outline-none focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20"
               />
-              {!isLogin && (
-                <p className="text-xs text-purple-400 mt-1">
-                  Must be at least 6 characters
-                </p>
-              )}
-              {isLogin && (
-                <div className="text-right mt-2">
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs text-purple-300 hover:text-purple-200 font-bold transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-purple-200 mb-2 uppercase tracking-wider">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) =>
+                  setFormData({ ...formData, confirmPassword: e.target.value })
+                }
+                required
+                placeholder="••••••••"
+                minLength={6}
+                className="w-full bg-slate-900/50 border-2 border-purple-500/30 rounded-xl px-4 py-3 transition-all text-white placeholder-slate-500 focus:outline-none focus:border-purple-400 focus:shadow-lg focus:shadow-purple-500/20"
+              />
             </div>
 
             <button
@@ -176,38 +184,28 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-4 rounded-xl font-black text-lg transition-all shadow-xl shadow-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/70 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading
-                ? "PROCESSING..."
-                : isLogin
-                ? "⚡ LOGIN"
-                : "🚀 CREATE ACCOUNT"}
+              {loading ? "RESETTING..." : "🔐 RESET PASSWORD"}
             </button>
           </form>
 
-          {/* Toggle */}
+          {/* Back to Login */}
           <div className="mt-6 text-center">
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setFormData({ email: "", password: "", name: "" });
-              }}
+            <Link
+              href="/login"
               className="text-purple-300 hover:text-purple-200 text-sm font-bold transition-colors"
             >
-              {isLogin
-                ? "New here? Create an account"
-                : "Already have an account? Login"}
-            </button>
+              Back to Login
+            </Link>
           </div>
         </div>
 
         {/* Power Message */}
         <div className="mt-6 text-center">
           <p className="text-xs text-purple-400 font-bold uppercase tracking-wider">
-            💪 DISCIPLINE EQUALS FREEDOM • 🎯 EXECUTE DAILY
+            🔥 RISE STRONGER • 🎯 SECURE YOUR MISSION
           </p>
         </div>
       </div>
     </main>
   );
 }
-

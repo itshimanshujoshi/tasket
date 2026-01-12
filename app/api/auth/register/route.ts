@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { hashPassword, generateToken, setAuthCookie } from "@/lib/auth";
+import { sendWelcomeEmail, sendAdminSignupNotification } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,6 +45,16 @@ export async function POST(req: NextRequest) {
 
     // Generate token
     const token = generateToken(result.insertedId.toString());
+
+    // Send welcome email to user
+    sendWelcomeEmail(email, name).catch(err =>
+      console.error('Failed to send welcome email:', err)
+    );
+
+    // Send notification to admin
+    sendAdminSignupNotification(email, name).catch(err =>
+      console.error('Failed to send admin notification:', err)
+    );
 
     // Create response with cookie
     const response = NextResponse.json({
