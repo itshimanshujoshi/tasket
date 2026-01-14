@@ -10,6 +10,12 @@ interface Todo {
   description: string;
   completed?: boolean;
   created_at?: Date;
+  pomodoro?: {
+    estimatedPomodoros: number;
+    completedPomodoros: number;
+    isActive: boolean;
+    startTime?: Date;
+  };
 }
 
 export default function HomePage() {
@@ -460,27 +466,54 @@ export default function HomePage() {
                               {todo.description}
                             </p>
                           )}
+                          {todo.pomodoro && todo.pomodoro.estimatedPomodoros > 0 && (
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-xs bg-orange-500/20 text-orange-300 px-2 py-1 rounded-lg border border-orange-500/30 font-bold">
+                                🍅 {todo.pomodoro.completedPomodoros}/{todo.pomodoro.estimatedPomodoros} Pomodoros
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex gap-2">
                           {!todo.completed && (
-                            <button
-                              onClick={() => startEdit(todo)}
-                              className="p-2 hover:bg-blue-500/20 rounded-xl transition-all border-2 border-transparent hover:border-blue-500/50"
-                              title="Edit task"
-                            >
-                              <svg
-                                className="w-5 h-5 text-blue-400"
-                                fill="none"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
+                            <>
+                              <button
+                                onClick={() => router.push(`/pomodoro/${todo._id}`)}
+                                className="p-2 hover:bg-orange-500/20 rounded-xl transition-all border-2 border-transparent hover:border-orange-500/50"
+                                title="Start Pomodoro"
                               >
-                                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                              </svg>
-                            </button>
+                                <svg
+                                  className="w-5 h-5 text-orange-400"
+                                  fill="none"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                              </button>
+
+                              <button
+                                onClick={() => startEdit(todo)}
+                                className="p-2 hover:bg-blue-500/20 rounded-xl transition-all border-2 border-transparent hover:border-blue-500/50"
+                                title="Edit task"
+                              >
+                                <svg
+                                  className="w-5 h-5 text-blue-400"
+                                  fill="none"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                              </button>
+                            </>
                           )}
 
                           <button
