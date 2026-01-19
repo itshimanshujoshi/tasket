@@ -1,38 +1,52 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import logo from "../public/images/logo.png";
 import Swal from "sweetalert2";
-
-interface User {
-  _id: string;
-  email: string;
-  name: string;
-}
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Header() {
-  const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading, logout, getTimeRemaining } = useAuth();
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
+  // Update time remaining every second
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await fetch("/api/auth/session");
-        const data = await response.json();
-        setUser(data.user);
-      } catch (error) {
-        console.error("Error fetching user:", error);
-      } finally {
-        setLoading(false);
-      }
+    const interval = setInterval(() => {
+      const remaining = getTimeRemaining();
+      setTimeRemaining(remaining);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [getTimeRemaining]);
+
+  // Listen for session expiring warning
+  useEffect(() => {
+    const handleSessionExpiring = async () => {
+      const result = await Swal.fire({
+        title: "⏰ Session Expiring",
+        text: "Your session will expire in 5 minutes. Please save your work.",
+        icon: "warning",
+        confirmButtonColor: "#9333ea",
+        confirmButtonText: "OK",
+        background: "#1e293b",
+        color: "#ffffff",
+      });
     };
-    fetchUser();
-  }, [pathname]);
+
+    window.addEventListener("session-expiring", handleSessionExpiring);
+    return () => window.removeEventListener("session-expiring", handleSessionExpiring);
+  }, []);
+
+  const formatTimeRemaining = (seconds: number | null) => {
+    if (seconds === null) return "";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const handleLogout = async () => {
     const result = await Swal.fire({
@@ -49,14 +63,7 @@ export default function Header() {
     });
 
     if (!result.isConfirmed) return;
-
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    await logout();
   };
 
   const isLoginPage = pathname === "/login";
@@ -97,6 +104,11 @@ export default function Header() {
                     <span className="text-sm font-bold text-purple-200">
                       {user.name.toUpperCase()}
                     </span>
+                    {timeRemaining !== null && (
+                      <span className={`text-xs font-mono ${timeRemaining < 300 ? 'text-red-400' : 'text-purple-300'}`}>
+                        ({formatTimeRemaining(timeRemaining)})
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={handleLogout}

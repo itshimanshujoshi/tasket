@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Todo {
   _id: string;
@@ -20,31 +21,12 @@ interface Todo {
 
 export default function HomePage() {
   const router = useRouter();
+  const { user, loading: checkingAuth } = useAuth({ redirectTo: "/login" });
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState({ title: "", description: "" });
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
-  // Check authentication
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/auth/session");
-        const data = await response.json();
-        if (!data.user) {
-          router.push("/login");
-          return;
-        }
-        setCheckingAuth(false);
-      } catch (error) {
-        console.error("Auth check error:", error);
-        router.push("/login");
-      }
-    };
-    checkAuth();
-  }, [router]);
 
   const fetchTodos = async () => {
     try {
@@ -66,10 +48,10 @@ export default function HomePage() {
     todos.length > 0 ? Math.round((completedCount / todos.length) * 100) : 0;
 
   useEffect(() => {
-    if (!checkingAuth) {
+    if (!checkingAuth && user) {
       fetchTodos();
     }
-  }, [checkingAuth]);
+  }, [checkingAuth, user]);
 
   const addTodo = async () => {
     if (!newTodo.title.trim()) {

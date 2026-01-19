@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getTokenExpiry } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser(req);
+  const token = req.cookies.get("auth-token")?.value;
 
-  if (!user) {
-    return NextResponse.json({ user: null }, { status: 401 });
+  if (!user || !token) {
+    return NextResponse.json({ user: null, expiresAt: null }, { status: 401 });
   }
 
-  return NextResponse.json({ user });
+  const expiresAt = getTokenExpiry(token);
+
+  return NextResponse.json({ user, expiresAt });
 }
 

@@ -6,10 +6,19 @@ import { ObjectId } from "mongodb";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
+// Token expiration time in seconds (1 hour)
+export const TOKEN_EXPIRY_SECONDS = 60 * 60; // 1 hour
+
 export interface User {
   _id: string;
   email: string;
   name: string;
+}
+
+export interface TokenPayload {
+  userId: string;
+  exp: number;
+  iat: number;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -24,7 +33,16 @@ export async function verifyPassword(
 }
 
 export function generateToken(userId: string): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY_SECONDS });
+}
+
+export function getTokenExpiry(token: string): number | null {
+  try {
+    const decoded = jwt.decode(token) as TokenPayload | null;
+    return decoded?.exp ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function verifyToken(token: string): { userId: string } | null {
@@ -78,7 +96,7 @@ export function setAuthCookie(res: NextResponse, token: string): void {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: TOKEN_EXPIRY_SECONDS,
     path: "/",
   });
 }
