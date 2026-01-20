@@ -4,7 +4,7 @@ import clientPromise from "./mongodb";
 import bcrypt from "bcryptjs";
 import { ObjectId } from "mongodb";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET || "";
 
 // Token expiration time in seconds (1 hour)
 export const TOKEN_EXPIRY_SECONDS = 60 * 60; // 1 hour

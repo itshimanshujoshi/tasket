@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const token = req.cookies.get("auth-token")?.value;
 
   if (!user || !token) {
-    return NextResponse.json({ user: null, expiresAt: null }, { status: 401 });
+    return NextResponse.json({ user: null, expiresAt: null });
   }
 
   const expiresAt = getTokenExpiry(token);
